@@ -146,5 +146,3 @@ fig.supylabel('Ct/C0')
 font1 = {'family':'serif','color':'blue','size':30}
 fig.suptitle('Breakthrough Curve', fontdict = font1)
 plt.show()
-
-print(df_bicarbonate)
