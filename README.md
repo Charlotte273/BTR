@@ -1,4 +1,4 @@
-# BTR
+# Bachelor Thesis Research
 Column adsorption study
 
 The code aims at representing the simulation of adsorption process in the sorbent chamber and studying how to improve the efficacy in solute clearance 
