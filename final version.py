@@ -7,14 +7,14 @@ from tabulate import tabulate
 
 #PART 1: PLOT EXPERIMENTAL BREAKTHROUGH CURVES
 
-#Time
+#Time (min)
 time = np.array([10, 20, 30, 60, 120, 180, 240])
 
 #Flow rate 
 Q = 60 #ml/min
 
-#Mass of the adsorbent 
-m = 300 #g
+#Mass of the adsorbent - activated carbon
+m = 200 #g
 
 #Effluent concentration (mmol/L) - the first value is influent concentration C0
 observed_bicarbonate = np.array([30.9, 31.0, 31.4, 30.9, 31.0, 30.8, 31.0, 30.4])
@@ -40,9 +40,9 @@ exp_glucose = np.array(observed_glucose[1:] / observed_glucose[0])
 # plt.legend()
 # plt.show()
 
-#PART 2: APPLY KINETIC MODELS / FIND MODELS' PARAMETERS 
+#PART 2: ANALYSIS OF GLUCOSE'S DATA 
 
-#GLUCOSE 
+#PART 2.1: APPLY KINETIC MODELS / FIND MODELS' PARAMETERS 
 
 #Data for glucose (unit: mg/mL)
 observed_glucose_2 = np.array([19.26, 1.03, 6.74, 12.30, 17.78, 19.11, 19.31, 19.13])
@@ -77,11 +77,11 @@ model_gl_Th.intercept_
 model_gl_Th.coef_ 
 
 rsq_gl_Th = model_gl_Th.score(x_gl_Th,y_gl_Th)
-y_pred_Gl_Th = model_gl_Th.predict(x_gl_Th)
+y_pred_gl_Th = model_gl_Th.predict(x_gl_Th)
 
 # Parameters for Thomas
-gl_k_Th = (-1 * model_gl_Th.coef_) / observed_glucose_2[0]
-gl_q_0 = (model_gl_Th.intercept_ * Q) / (gl_k_Th * m)
+gl_k_Th = (-1 * model_gl_Th.coef_) / observed_glucose_2[0] #mL/min.mg
+gl_q_0 = (model_gl_Th.intercept_ * Q) / (gl_k_Th * m) #mg/g
 
 #Linear regression for Yoon-Nelson model
 x_gl_YN = np.array(x_time)
@@ -104,9 +104,9 @@ data = [['Thomas', observed_glucose_2[0], Q, gl_k_Th, gl_q_0, rsq_gl_Th],
          ['Yoon-Nelson', observed_glucose_2[0], Q, gl_k_YN, gl_torque, rsq_gl_YN]]
 
 headers=["Model", "Glucose C0 (mg/mL)", "Q (mL/min)", "Rate constant", "Parameter", "R_squared"]
-print (tabulate(data, headers))
+# print (tabulate(data, headers))
 
-#Predicted Ct/C0 based on models
+#PART 2.2: PREDICTED Ct/C0 FROM MODELS 
 
 #Plot experimental glucose breakthrough curve - manually drop out the value which give NaN in log calculation 
 time_new = np.array([10, 20, 30, 60, 120, 240])
@@ -125,7 +125,9 @@ plt.plot(time_new, gl_predicted_YN, label='Yoon-Nelson')
 plt.xlabel('Time(min)')
 plt.ylabel('Ct by C0')
 plt.legend(loc='lower right')
-plt.show()
+# plt.show()
+
+#PART 2.3: ERROR ANALYSIS  
 
 #Error analysis for Thomas 
 n = len(time_new) #number of data points
@@ -154,4 +156,65 @@ def calculate_mpsd(n, p, q_e, q_cal_Th):
         return 100 * np.sqrt ((1/ (n - p)) * sum(((q_e[i] - q_cal_Th[i]) / q_e[i]) **2 for i in range(n)))
 mpsd_Th = calculate_mpsd(n, p, q_e, q_cal_Th)
 
-print(ERRSQ_Th, hfe_Th, mpsd_Th)
+#PART 3: ANALYSIS OF MAGNESIUM'S DATA 
+
+#Unit conversion 
+Mg_molecular_weight = 203.3 #g/mol
+observed_magnesium_2 = np.array(observed_magnesium * Mg_molecular_weight / 1000)
+Mg_CtbyC0 = np.array(observed_magnesium_2[1:] / observed_magnesium_2[0])
+
+#PART 3.1: APPLY KINETIC MODELS / FIND MODELS' PARAMETERS
+
+#Calculation log(Ct/C0) 
+Mg_Th = np.log((1/Mg_CtbyC0)-1)
+Mg_YN = np.log(1/((1/Mg_CtbyC0)-1))
+
+# Linear regression for Thomas
+x_Mg_Th = np.array(time).reshape(-1, 1)
+y_Mg_Th = np.array(Mg_Th)
+
+model_Mg_Th = LinearRegression()
+model_Mg_Th.fit(x_Mg_Th, y_Mg_Th)
+model_Mg_Th.intercept_  
+model_Mg_Th.coef_ 
+
+rsq_Mg_Th = model_Mg_Th.score(x_Mg_Th,y_Mg_Th)
+y_pred_Mg_Th = model_Mg_Th.predict(x_Mg_Th)
+
+# Parameters for Thomas
+Mg_k_Th = (-1 * model_Mg_Th.coef_) / observed_magnesium_2[0] #mL/min.mg
+Mg_q_0 = (model_Mg_Th.intercept_ * Q) / (Mg_k_Th * m) #mg/g
+
+#Linear regression for Yoon-Nelson model
+x_Mg_YN = np.array(time).reshape(-1, 1)
+y_Mg_YN = np.array(Mg_YN)
+
+model_Mg_YN = LinearRegression()
+model_Mg_YN.fit(x_Mg_YN, y_Mg_YN)
+model_Mg_YN.intercept_  
+model_Mg_YN.coef_  
+
+#Parameters for Yoon-Nelson 
+rsq_Mg_YN = model_Mg_YN.score(x_Mg_YN,y_Mg_YN)
+y_pred_Mg_YN = model_Mg_YN.predict(x_Mg_YN)
+
+Mg_k_YN = model_Mg_YN.coef_ 
+Mg_torque = model_Mg_YN.intercept_ / (-1 * Mg_k_YN)
+
+#PART 3.2: PREDICTED Ct/C0 FROM MODELS 
+
+#PART 3.3: ERROR ANALYSIS
+
+#PART 4: ANALYSIS OF CALCIUM'S DATA
+
+#Unit conversion 
+Ca_molecular_weight = 111.56 #g/mol
+observed_calcium_2 = np.array(observed_calcium * Ca_molecular_weight / 1000)
+Ca_CtbyC0 = np.array(observed_calcium_2[1:] / observed_calcium_2[0])
+
+#PART 4.1: APPLY KINETIC MODELS / FIND MODELS' PARAMETERS
+
+#PART 4.2: PREDICTED Ct/C0 FROM MODELS 
+
+#PART 4.3: ERROR ANALYSIS
+
